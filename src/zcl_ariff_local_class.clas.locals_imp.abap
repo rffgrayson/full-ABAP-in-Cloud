@@ -9,6 +9,7 @@ class lcl_connection definition.
 
 
      CLASS-DATA conn_counter TYPE i READ-ONLY.
+     CLASS-METHODS class_constructor.
 
      METHODS constructor
        IMPORTING
@@ -31,9 +32,25 @@ class lcl_connection definition.
                     AirlineName TYPE /dmo/carrier_name,
               END OF st_details.
     DATA details TYPE st_details.
+
+        TYPES: BEGIN OF st_airport,
+                AirportID TYPE /dmo/airport_id,
+                Name      TYPE /dmo/airport_name,
+               END OF st_airport.
+
+     TYPES tt_airports TYPE STANDARD TABLE OF st_airport
+                  WITH NON-UNIQUE DEFAULT KEY.
+
+    CLASS-DATA airports TYPE tt_airports.
 endclass.
 
 class lcl_connection implementation.
+
+  method class_constructor.
+     SELECT FROM /DMO/I_Airport
+          FIELDS AirportID, Name
+            INTO TABLE @airports.
+  endmethod.
 
   method constructor.
 
@@ -61,11 +78,13 @@ class lcl_connection implementation.
   endmethod.
 
   method get_output.
+    DATA(departure)   = airports[ airportID = details-departureairport   ].
+  DATA(destination) = airports[ airportID = details-destinationairport ].
     APPEND |--------------------------------|             TO r_output.
     APPEND |Carrier:     { carrier_id } { details-airlinename }| TO r_output.
     APPEND |Connection:  { connection_id   }|             TO r_output.
-    APPEND |Departure:   { details-departureairport }|             TO r_output.
-    APPEND |Destination: { details-destinationairport   }|             TO r_output.
+    APPEND |Departure:   { details-departureairport   } { departure-name   }| TO r_output.
+    APPEND |Destination: { details-destinationairport } { destination-name }| TO r_output.
     APPEND |--------------------------------|             TO r_output.
   endmethod.
 
